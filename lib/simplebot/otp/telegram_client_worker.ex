@@ -40,7 +40,7 @@ defmodule Simplebot.Otp.TelegramClientWorker do
     # Get updates
     timeout = Application.get_env(:simplebot, :get_updates_timeout, @default_timeout)
     limit = Application.get_env(:simplebot, :get_updates_limit, @default_limit)
-    {:ok, updates, max_update_id} = retrieve_updates(bot_token, offset, timeout, limit)
+    {:ok, max_update_id} = retrieve_updates(bot_token, offset, timeout, limit)
 
     # Check again in `interval` ms
     interval = Application.get_env(:simplebot, :get_updates_interval, @default_interval)
@@ -66,6 +66,6 @@ defmodule Simplebot.Otp.TelegramClientWorker do
       {:ok, update_id} = TelegramChatWorker.apply_update(update)
       update_id
     end)
-    {:ok, updates, last_update_id}
+    {:ok, last_update_id}
   end
 end
