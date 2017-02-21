@@ -1,10 +1,5 @@
 # Simplebot
 
-Insanely overarchitected Telegram Bot example, written in Elixir.
-
-
-## Instructions
-
 1. Create new file `config/dev_secret.exs` with the following content:
   ```
   use Mix.Config
