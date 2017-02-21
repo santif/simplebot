@@ -23,12 +23,14 @@ defmodule Simplebot.Telegram.TelegramBotApi do
       timeout: timeout_secs
     }
     json_request = Poison.encode!(params)
-    request_timeout_ms = timeout_secs * 1.2 * 1_000
+    request_timeout_ms = round(timeout_secs * 1.2 * 1_000)
+    Logger.debug "getUpdates - request: #{inspect params}"
     result = HTTPotion.post("#{bot_url(token)}/getUpdates", [body: json_request,
       headers: ["Content-Type": "application/json"], timeout: request_timeout_ms])
     case result do
       %HTTPotion.Response{body: response_body, status_code: 200} ->
         %{"ok" => true, "result" => results} = Poison.decode!(response_body)
+        Logger.debug "getUpdates - response: #{inspect results}"
         results
       %HTTPotion.ErrorResponse{message: "req_timedout"} ->
         []

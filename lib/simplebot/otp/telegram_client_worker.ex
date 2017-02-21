@@ -8,13 +8,13 @@ defmodule Simplebot.Otp.TelegramClientWorker do
 
   defmodule State do
     defstruct bot_token: nil,
-      last_update_id: 0
+      offset: -1
   end
 
   @default_interval 500
   @default_timeout 10_000
   @default_limit 100
-
+  @default_offset 1
 
   ##
   ## API
@@ -32,21 +32,21 @@ defmodule Simplebot.Otp.TelegramClientWorker do
   def init(_args) do
     send(self(), :check_for_updates)
     bot_token = Application.get_env(:simplebot, :telegram_bot_token)
-    {:ok, %State{bot_token: bot_token, last_update_id: 0}}
+    {:ok, %State{bot_token: bot_token, offset: @default_offset}}
   end
 
   def handle_info(:check_for_updates, state = %State{bot_token: bot_token,
-      last_update_id: last_update_id}) do
+      offset: offset}) do
     # Get updates
     timeout = Application.get_env(:simplebot, :get_updates_timeout, @default_timeout)
     limit = Application.get_env(:simplebot, :get_updates_limit, @default_limit)
-    {:ok, updates, new_last_update_id} = retrieve_updates(bot_token, last_update_id, timeout, limit)
+    {:ok, updates, max_update_id} = retrieve_updates(bot_token, offset, timeout, limit)
 
     # Check again in `interval` ms
     interval = Application.get_env(:simplebot, :get_updates_interval, @default_interval)
     Process.send_after(self(), :check_for_updates, interval)
 
-    {:noreply, %State{state | last_update_id: new_last_update_id + 1}}
+    {:noreply, %State{state | offset: max_update_id + 1}}
   end
 
   def handle_info(msg, state) do
@@ -59,13 +59,13 @@ defmodule Simplebot.Otp.TelegramClientWorker do
   ## Private functions
   ##
 
-  defp retrieve_updates(token, last_update_id, timeout, limit) do
-    updates = TelegramBotApi.get_updates!(token, last_update_id, timeout, limit)
-    max_update_id = updates
-    |> List.foldl(last_update_id, fn(update, acc) ->
+  defp retrieve_updates(token, offset, timeout, limit) do
+    updates = TelegramBotApi.get_updates!(token, offset, timeout, limit)
+    last_update_id = updates
+    |> List.foldl(offset, fn(update, _acc) ->
       {:ok, update_id} = TelegramChatWorker.apply_update(update)
-      max(acc, update_id)
+      update_id
     end)
-    {:ok, updates, max_update_id}
+    {:ok, updates, last_update_id}
   end
 end
