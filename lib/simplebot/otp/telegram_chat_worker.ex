@@ -4,9 +4,9 @@ defmodule Simplebot.Otp.TelegramChatWorker do
 
   alias Simplebot.Otp.TelegramChatWorker.State
   alias Simplebot.Otp.TelegramChatSup
-  alias Simplebot.Simple
-  alias Simplebot.SimpleView
-  alias Simplebot.Telegram
+  alias Simplebot.Bot.SimpleBot
+  alias Simplebot.Telegram.TelegramBotApi
+  alias Simplebot.Telegram.TelegramBotUpdate
 
   defmodule State do
     defstruct chat_id: nil,
@@ -14,16 +14,18 @@ defmodule Simplebot.Otp.TelegramChatWorker do
       bot_token: nil
   end
 
+
+  ##
+  ## API
+  ##
+
   def start_link(chat_id) do
     via_tuple = {:via, Registry, {Registry.TelegramChat, chat_id}}
     GenServer.start_link(__MODULE__, [chat_id], name: via_tuple)
   end
 
-  @doc """
-  TODO - document
-  """
   def apply_update(update) do
-    {:ok, update_id, chat_id} = Telegram.get_update_data(update)
+    {:ok, update_id, chat_id} = TelegramBotUpdate.get_update_data(update)
     server = get_or_create_chat_server(chat_id)
     GenServer.cast(server, {:update, update})
     {:ok, update_id}
@@ -37,18 +39,19 @@ defmodule Simplebot.Otp.TelegramChatWorker do
   def init([chat_id]) do
     Logger.debug "Starting TelegramChatWorker - chat_id: #{chat_id}"
     bot_token = Application.get_env(:simplebot, :telegram_bot_token)
-    {:ok, chat_state} = Simple.init()
+    {:ok, chat_state} = SimpleBot.init()
     {:ok, %State{chat_id: chat_id, chat_state: chat_state, bot_token: bot_token}}
   end
 
-  def handle_cast({:update, update}, state = %State{chat_state: chat_state, bot_token: bot_token,
-      chat_id: chat_id}) do
-    message = Telegram.parse_update(update)
-    case Simple.handle_message(message, chat_state) do
+  def handle_cast({:update, %{"message" => message}}, state = %State{
+      chat_state: chat_state, bot_token: bot_token, chat_id: chat_id}) do
+    case SimpleBot.handle_message(message, chat_state) do
+
       {:reply, reply, new_chat_state} ->
-        {:ok, text, parse_mode} = SimpleView.render(reply)
-        {:ok, _message_sent} = Telegram.send_message(bot_token, chat_id, text, parse_mode)
+        ## TODO view module
+        {:ok, _message_sent} = TelegramBotApi.send_message(bot_token, chat_id, reply, "Markdown")
         {:noreply, %State{state | chat_state: new_chat_state}}
+
       {:noreply, new_chat_state} ->
         {:noreply, %State{state | chat_state: new_chat_state}}
     end

@@ -1,12 +1,11 @@
-defmodule Simplebot.Simple do
-
+defmodule Simplebot.Bot.SimpleBot do
   @moduledoc """
-  State machine business logic
+  Simplebot state machine
   """
 
   require Logger
-  alias Simplebot.Simple.State
-  alias Simplebot.Service.Echo, as: EchoService
+  alias Simplebot.Bot.SimpleBot.State
+  alias Simplebot.Service.Main, as: MainService
 
   defmodule State do
     defstruct current: nil,
@@ -29,8 +28,8 @@ defmodule Simplebot.Simple do
   Process user request
   """
   @spec handle_message(message :: map(), state :: Simplebot.Simple.State.t, DateTime.t) ::
-    {:reply, reply :: map(), Simplebot.Simple.State.t} |
-    {:noreply, Simplebot.Simple.State.t}
+    {:reply, reply :: map(), Simplebot.Bot.SimpleBot.State.t} |
+    {:noreply, Simplebot.Bot.SimpleBot.State.t}
   def handle_message(message, state = %State{}, now \\ DateTime.utc_now()) do
     Logger.debug fn ->
       ">> Start operation: #{inspect message} - Current state: #{inspect state}"
@@ -54,39 +53,38 @@ defmodule Simplebot.Simple do
   ## Internal API
   ##
 
-  def process_request(%{text: "/start"}, _state) do
+  def process_request(%{"text" => "/start"}, state) do
     welcome = """
     Welcome to Simplebot! Please enter any command or just type "help"
     """
-    {:reply, %{text: welcome}, %State{}}
+    {:reply, %{"text" => welcome}, %State{state | current: nil}}
   end
 
-
-  def process_request(%{text: "/q"}, state) do
-    Logger.debug "Cancel current operation"
-    {:noreply, %State{state | current: nil}}
+  def process_request(%{"text" => "/q"}, state = %State{current: cur}) when not is_nil(cur) do
+    {:reply, %{"text" => "Cancelled"}, %State{state | current: nil}}
   end
 
-  def process_request(%{text: "/echo"}, state = %State{current: nil}) do
-    {:reply, %{text: "Please, say something:"}, %State{state | current: :echo}}
+  def process_request(%{"text" => "/reverse"}, state = %State{current: nil}) do
+    {:reply, %{"text" => "Please, insert text to reverse:"}, %State{state | current: :reverse}}
   end
 
-  def process_request(%{text: text}, state = %State{current: :echo}) do
-    Logger.debug "Cancel current operation"
-    case EchoService.echo(text) do
+  def process_request(%{"text" => text}, state = %State{current: :reverse}) do
+    case MainService.reverse(text) do
       {:ok, result} ->
-        {:reply, %{text: result}, %State{state | current: nil}}
+        {:reply, %{"text" => result}, %State{state | current: nil}}
       {:error, reason} ->
-        {:reply, %{text: "#{reason}"}, %State{state | current: :echo}}
+        Logger.error "Error processing '#{text}'. Current state is :reverse"
+        {:reply, %{"text" => "An error has ocurred. Please, try again"},
+          %State{state | current: :reverse}}
     end
   end
 
-  def process_request(%{text: _text}, state) do
-    mod = """
+  def process_request(%{"text" => _text}, state) do
+    welcome_banner = """
     *Commands*:
-    /echo: Echo next message (reversed!)
+    /reverse: Reverse next message
     """
-    {:reply, %{text: mod}, %State{state | current: nil}}
+    {:reply, %{"text" => welcome_banner}, %State{state | current: nil}}
   end
 
 

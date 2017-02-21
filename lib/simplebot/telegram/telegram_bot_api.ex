@@ -1,17 +1,21 @@
-defmodule Simplebot.Telegram do
+defmodule Simplebot.Telegram.TelegramBotApi do
 
   @moduledoc """
-  TODO - document
+  Telegram API methods - https://core.telegram.org/bots/api/#available-methods
   """
 
   require Logger
-
   @telegram_bot_api_url "https://api.telegram.org"
 
+
+  ##
+  ## API
+  ##
+
   @doc """
-  TODO - document
+  Telegram API - getUpdates: https://core.telegram.org/bots/api/#getupdates
   """
-  def get_updates!(token, offset \\ 0, limit \\ 100, timeout \\ 5_000) do
+  def get_updates!(token, offset \\ 0, timeout \\ 5_000, limit \\ 100) do
     params = %{
       offset: offset,
       limit: limit,
@@ -29,37 +33,22 @@ defmodule Simplebot.Telegram do
   end
 
   @doc """
-  TODO - document
+  Telegram API - send_message: https://core.telegram.org/bots/api/#sendmessage
   """
-  def send_message(token, chat_id, text, parse_mode \\ "Markdown", reply_to_message_id \\ nil) do
-    request = %{
-      chat_id: chat_id,
-      text: text,
-      parse_mode: parse_mode,
-    }
-    request = case reply_to_message_id do
+  def send_message(token, chat_id, message, parse_mode \\ "Markdown", reply_to_message_id \\ nil) do
+    request = Map.merge(message, %{
+      "chat_id" => chat_id,
+      "parse_mode" => parse_mode
+    })
+    request2 = case reply_to_message_id do
       nil -> request
       value -> Map.put(request, :reply_to_message_id, value)
     end
-    json_request = Poison.encode!(request)
+    json_request = Poison.encode!(request2)
     result = HTTPotion.post("#{bot_url(token)}/sendMessage", [body: json_request,
       headers: ["Content-Type": "application/json"]])
     %HTTPotion.Response{body: response_body, status_code: 200} = result
     {:ok, Poison.decode!(response_body)}
-  end
-
-  @doc """
-  Returns {:ok, update_id, chat_id} from Telegram udpate
-  """
-  def get_update_data(%{"message" => %{"chat" => %{"id" => chat_id}}, "update_id" => update_id}) do
-    {:ok, update_id, chat_id}
-  end
-
-  @doc """
-  Parse incoming update
-  """
-  def parse_update(%{"message" => %{"text" => text}}) do
-    %{text: text}
   end
 
 
