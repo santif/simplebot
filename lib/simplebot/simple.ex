@@ -54,7 +54,7 @@ defmodule Simplebot.Simple do
   ## Internal API
   ##
 
-  def process_request(%{text: "/start"}, state) do
+  def process_request(%{text: "/start"}, _state) do
     welcome = """
     Welcome to Simplebot! Please enter any command or just type "help"
     """
