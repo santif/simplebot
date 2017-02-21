@@ -1,0 +1,15 @@
+{
+    "search.exclude": {
+        "**/_build": true,
+        "**/deps": true,
+        "**/*.beam": true
+    },
+    "explorer.enableDragAndDrop": false,
+    "files.eol": "\n",
+    "editor.rulers": [
+        100
+    ],
+    "editor.tabSize": 2,
+    "editor.insertSpaces": true,
+    "git.confirmSync": false
+}
