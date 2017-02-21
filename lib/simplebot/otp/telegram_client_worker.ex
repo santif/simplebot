@@ -11,8 +11,9 @@ defmodule Simplebot.Otp.TelegramClientWorker do
       last_update_id: 0
   end
 
-  @default_interval 1_000
+  @default_interval 500
   @default_timeout 10_000
+  @limit 100
 
 
   ##
@@ -36,7 +37,8 @@ defmodule Simplebot.Otp.TelegramClientWorker do
 
   def handle_info(:check_for_updates, state = %State{bot_token: bot_token,
       last_update_id: last_update_id}) do
-    updates = Telegram.get_updates!(bot_token, last_update_id)
+    timeout = Application.get_env(:simplebot, :get_updates_timeout, @default_timeout)
+    updates = Telegram.get_updates!(bot_token, last_update_id, @limit, timeout)
     last_update_id = updates
     |> List.foldl(0, fn(update, acc) ->
       {:ok, update_id} = TelegramChatWorker.apply_update(update)
@@ -46,9 +48,8 @@ defmodule Simplebot.Otp.TelegramClientWorker do
     Process.send_after(self(), :check_for_updates, interval)
     {:noreply, %State{state | last_update_id: last_update_id + 1}}
   end
-
-  # def handle_info(msg, state) do
-  #   Logger.warn "Unhandled info: #{inspect msg}"
-  #   {:noreply, state}
-  # end
+  def handle_info(msg, state) do
+    Logger.warn "Unhandled message: #{inspect msg}"
+    {:noreply, state}
+  end
 end

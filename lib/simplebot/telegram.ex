@@ -48,6 +48,20 @@ defmodule Simplebot.Telegram do
     {:ok, Poison.decode!(response_body)}
   end
 
+  @doc """
+  Returns {:ok, update_id, chat_id} from Telegram udpate
+  """
+  def get_update_data(%{"message" => %{"chat" => %{"id" => chat_id}}, "update_id" => update_id}) do
+    {:ok, update_id, chat_id}
+  end
+
+  @doc """
+  Parse incoming update
+  """
+  def parse_update(%{"message" => %{"text" => text}}) do
+    %{text: text}
+  end
+
 
   ##
   ## Private functions

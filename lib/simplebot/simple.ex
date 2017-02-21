@@ -54,6 +54,14 @@ defmodule Simplebot.Simple do
   ## Internal API
   ##
 
+  def process_request(%{text: "/start"}, state) do
+    welcome = """
+    Welcome to Simplebot! Please enter any command or just type "help"
+    """
+    {:reply, %{text: welcome}, %State{}}
+  end
+
+
   def process_request(%{text: "/q"}, state) do
     Logger.debug "Cancel current operation"
     {:noreply, %State{state | current: nil}}
@@ -73,7 +81,7 @@ defmodule Simplebot.Simple do
     end
   end
 
-  def process_request(%{text: text}, state) do
+  def process_request(%{text: _text}, state) do
     mod = """
     *Commands*:
     /echo: Echo next message (reversed!)

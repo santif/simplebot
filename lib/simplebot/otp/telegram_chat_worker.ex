@@ -22,9 +22,8 @@ defmodule Simplebot.Otp.TelegramChatWorker do
   @doc """
   TODO - document
   """
-  def apply_update(update = %{"message" => %{"chat" => %{"id" => chat_id}}, 
-      "update_id" => update_id}) do
-    via_tuple = {:via, Registry, {Registry.TelegramChat, chat_id}}
+  def apply_update(update) do
+    {:ok, update_id, chat_id} = Telegram.get_update_data(update)
     server = get_or_create_chat_server(chat_id)
     GenServer.cast(server, {:update, update})
     {:ok, update_id}
@@ -44,8 +43,8 @@ defmodule Simplebot.Otp.TelegramChatWorker do
 
   def handle_cast({:update, update}, state = %State{chat_state: chat_state, bot_token: bot_token,
       chat_id: chat_id}) do
-    message = update["message"]["text"]
-    case Simple.handle_message(%{text: message}, chat_state) do
+    message = Telegram.parse_update(update)
+    case Simple.handle_message(message, chat_state) do
       {:reply, reply, new_chat_state} ->
         {:ok, text, parse_mode} = SimpleView.render(reply)
         {:ok, _message_sent} = Telegram.send_message(bot_token, chat_id, text, parse_mode)
