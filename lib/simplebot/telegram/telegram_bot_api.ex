@@ -15,14 +15,17 @@ defmodule Simplebot.Telegram.TelegramBotApi do
   @doc """
   Telegram API - getUpdates: https://core.telegram.org/bots/api/#getupdates
   """
-  def get_updates!(token, offset \\ 0, timeout \\ 5_000, limit \\ 100) do
+  def get_updates!(token, offset \\ 0, api_timeout_ms \\ 5_000, limit \\ 100) do
+    timeout_secs = round(api_timeout_ms / 1_000)
     params = %{
       offset: offset,
       limit: limit,
-      timeout: timeout}
+      timeout: timeout_secs
+    }
     json_request = Poison.encode!(params)
+    request_timeout_ms = timeout_secs * 1.2 * 1_000
     result = HTTPotion.post("#{bot_url(token)}/getUpdates", [body: json_request,
-      headers: ["Content-Type": "application/json"]])
+      headers: ["Content-Type": "application/json"], timeout: request_timeout_ms])
     case result do
       %HTTPotion.Response{body: response_body, status_code: 200} ->
         %{"ok" => true, "result" => results} = Poison.decode!(response_body)
